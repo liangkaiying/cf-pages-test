@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>扫雷</title>
+  <style>
+    :root {
+      --bg-1: #0f172a;
+      --bg-2: #1e293b;
+      --panel: rgba(248, 250, 252, 0.9);
+      --panel-strong: rgba(255, 255, 255, 0.98);
+      --line: rgba(15, 23, 42, 0.12);
+      --text: #0f172a;
+      --muted: #516072;
+      --accent: #ea580c;
+      --accent-2: #0891b2;
+      --safe: #0f766e;
+      --danger: #b91c1c;
+      --shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+      --cell-size: min(9.2vw, 40px);
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 20%, rgba(8, 145, 178, 0.32), transparent 28%),
+        radial-gradient(circle at 85% 18%, rgba(234, 88, 12, 0.26), transparent 22%),
+        linear-gradient(145deg, var(--bg-1), var(--bg-2));
+      padding: 24px;
+    }
+
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel,
+    .game {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(14px);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 24px;
+      position: sticky;
+      top: 24px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(8, 145, 178, 0.12);
+      color: #0e7490;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 16px 0 12px;
+      font-size: clamp(36px, 7vw, 60px);
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+    }
+
+    .lead,
+    .hint,
+    .status-text {
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin: 22px 0;
+    }
+
+    .stat {
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+
+    .stat span {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .stat strong {
+      font-size: 28px;
+      letter-spacing: -0.04em;
+    }
+
+    .group-title {
+      margin: 24px 0 10px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: #334155;
+      text-transform: uppercase;
+    }
+
+    .difficulty-grid,
+    .control-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .difficulty-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .control-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 12px;
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+    }
+
+    .pill,
+    .action {
+      border-radius: 999px;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .pill {
+      background: rgba(15, 23, 42, 0.06);
+      color: #1e293b;
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+    }
+
+    .pill.active {
+      background: linear-gradient(135deg, #f97316, #fb7185);
+      color: white;
+      box-shadow: 0 14px 28px rgba(249, 115, 22, 0.28);
+    }
+
+    .action {
+      background: linear-gradient(135deg, #0f766e, #0891b2);
+      color: white;
+      box-shadow: 0 16px 28px rgba(8, 145, 178, 0.24);
+    }
+
+    .action.alt {
+      background: linear-gradient(135deg, #1e293b, #475569);
+      box-shadow: 0 16px 28px rgba(15, 23, 42, 0.22);
+    }
+
+    .action.toggle-flag {
+      background: linear-gradient(135deg, #ea580c, #f43f5e);
+      box-shadow: 0 16px 28px rgba(244, 63, 94, 0.22);
+    }
+
+    .action.active {
+      filter: saturate(1.15);
+      transform: translateY(-1px);
+    }
+
+    .pill:hover,
+    .action:hover {
+      transform: translateY(-1px);
+    }
+
+    .legend {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .legend-swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      flex: 0 0 auto;
+    }
+
+    .game {
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    .game-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .game-title {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 36px);
+      letter-spacing: -0.04em;
+    }
+
+    .status-card {
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      min-width: 220px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(8, 145, 178, 0.12);
+      color: #0e7490;
+      margin-bottom: 8px;
+    }
+
+    .status-badge.win {
+      background: rgba(15, 118, 110, 0.12);
+      color: var(--safe);
+    }
+
+    .status-badge.lose {
+      background: rgba(185, 28, 28, 0.12);
+      color: var(--danger);
+    }
+
+    .board-wrap {
+      position: relative;
+      background:
+        linear-gradient(160deg, rgba(255, 255, 255, 0.82), rgba(248, 250, 252, 0.92)),
+        linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(249, 115, 22, 0.08));
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+      overflow: auto;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), var(--cell-size));
+      gap: 6px;
+      justify-content: start;
+      min-width: fit-content;
+    }
+
+    .cell {
+      width: var(--cell-size);
+      height: var(--cell-size);
+      border-radius: 12px;
+      background: linear-gradient(145deg, #dbe4ee, #f8fbff);
+      color: #0f172a;
+      font-size: clamp(14px, 2vw, 18px);
+      font-weight: 900;
+      box-shadow:
+        inset 0 0 0 1px rgba(71, 85, 105, 0.16),
+        0 6px 14px rgba(15, 23, 42, 0.1);
+      user-select: none;
+    }
+
+    .cell:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+    }
+
+    .cell.revealed {
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.35);
+    }
+
+    .cell.revealed.zero {
+      color: transparent;
+    }
+
+    .cell.mine {
+      background: linear-gradient(135deg, #fecaca, #f87171);
+      color: #7f1d1d;
+    }
+
+    .cell.flagged {
+      background: linear-gradient(135deg, #fed7aa, #fb7185);
+      color: white;
+    }
+
+    .cell.wrong {
+      outline: 2px solid rgba(185, 28, 28, 0.42);
+    }
+
+    .cell.n1 { color: #2563eb; }
+    .cell.n2 { color: #15803d; }
+    .cell.n3 { color: #b91c1c; }
+    .cell.n4 { color: #6d28d9; }
+    .cell.n5 { color: #9a3412; }
+    .cell.n6 { color: #0f766e; }
+    .cell.n7 { color: #374151; }
+    .cell.n8 { color: #475569; }
+
+    .hint {
+      margin-top: 14px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 980px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        position: static;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 14px;
+      }
+
+      .panel,
+      .game {
+        padding: 18px;
+      }
+
+      .difficulty-grid,
+      .control-grid,
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      .game-head {
+        flex-direction: column;
+      }
+
+      .status-card {
+        min-width: 0;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="panel">
+      <div class="eyebrow">Mini Game</div>
+      <h1>扫雷</h1>
+      <p class="lead">左键翻开格子，右键插旗。第一次点击一定安全，清掉所有非雷格子就能获胜。</p>
+
+      <div class="stats">
+        <div class="stat">
+          <span>剩余地雷</span>
+          <strong id="mineCount">10</strong>
+        </div>
+        <div class="stat">
+          <span>用时</span>
+          <strong id="timer">0s</strong>
+        </div>
+      </div>
+
+      <div class="group-title">难度</div>
+      <div class="difficulty-grid" id="difficultyGrid">
+        <button class="pill active" data-level="easy">简单</button>
+        <button class="pill" data-level="medium">中等</button>
+        <button class="pill" data-level="hard">困难</button>
+      </div>
+
+      <div class="group-title">操作</div>
+      <div class="control-grid">
+        <button class="action" id="resetBtn">重新开始</button>
+        <button class="action alt" id="revealModeBtn">点击翻开</button>
+        <button class="action toggle-flag" id="flagModeBtn">点击插旗</button>
+        <button class="action alt" id="tipBtn">查看规则</button>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item">
+          <span class="legend-swatch" style="background: linear-gradient(145deg, #dbe4ee, #f8fbff);"></span>
+          未翻开的格子
+        </div>
+        <div class="legend-item">
+          <span class="legend-swatch" style="background: linear-gradient(135deg, #fed7aa, #fb7185);"></span>
+          已插旗的怀疑位置
+        </div>
+        <div class="legend-item">
+          <span class="legend-swatch" style="background: linear-gradient(135deg, #fecaca, #f87171);"></span>
+          地雷
+        </div>
+      </div>
+    </section>
+
+    <section class="game">
+      <div class="game-head">
+        <div>
+          <div class="eyebrow">Board</div>
+          <h2 class="game-title" id="boardTitle">9 x 9 / 10 雷</h2>
+        </div>
+        <div class="status-card">
+          <div class="status-badge" id="statusBadge">准备开始</div>
+          <div class="status-text" id="statusText">点任意格开始。手机上可切换为“点击插旗”模式。</div>
+        </div>
+      </div>
+
+      <div class="board-wrap">
+        <div class="board" id="board"></div>
+      </div>
+
+      <div class="hint" id="hintText">提示：右键可以快速插旗；第一次翻开会自动避开首格与周围区域。</div>
+    </section>
+  </main>
+
+  <script>
+    const levels = {
+      easy: { rows: 9, cols: 9, mines: 10, label: "简单" },
+      medium: { rows: 12, cols: 12, mines: 22, label: "中等" },
+      hard: { rows: 16, cols: 16, mines: 40, label: "困难" }
+    };
+
+    const boardEl = document.getElementById("board");
+    const boardTitleEl = document.getElementById("boardTitle");
+    const mineCountEl = document.getElementById("mineCount");
+    const timerEl = document.getElementById("timer");
+    const statusBadgeEl = document.getElementById("statusBadge");
+    const statusTextEl = document.getElementById("statusText");
+    const hintTextEl = document.getElementById("hintText");
+    const revealModeBtn = document.getElementById("revealModeBtn");
+    const flagModeBtn = document.getElementById("flagModeBtn");
+    const difficultyButtons = [...document.querySelectorAll("[data-level]")];
+
+    const state = {
+      level: "easy",
+      rows: 9,
+      cols: 9,
+      mines: 10,
+      board: [],
+      generated: false,
+      gameOver: false,
+      win: false,
+      revealedCount: 0,
+      flagsPlaced: 0,
+      actionMode: "reveal",
+      timerId: null,
+      startedAt: 0
+    };
+
+    function makeCell(row, col) {
+      return {
+        row,
+        col,
+        mine: false,
+        revealed: false,
+        flagged: false,
+        wrong: false,
+        count: 0,
+        el: null
+      };
+    }
+
+    function resetTimer() {
+      if (state.timerId) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+      }
+      state.startedAt = 0;
+      timerEl.textContent = "0s";
+    }
+
+    function startTimer() {
+      if (state.timerId) return;
+      state.startedAt = Date.now();
+      state.timerId = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - state.startedAt) / 1000);
+        timerEl.textContent = elapsed + "s";
+      }, 1000);
+    }
+
+    function setStatus(kind, title, text) {
+      statusBadgeEl.textContent = title;
+      statusBadgeEl.className = "status-badge" + (kind ? " " + kind : "");
+      statusTextEl.textContent = text;
+    }
+
+    function updateModeButtons() {
+      revealModeBtn.classList.toggle("active", state.actionMode === "reveal");
+      flagModeBtn.classList.toggle("active", state.actionMode === "flag");
+    }
+
+    function updateCounters() {
+      mineCountEl.textContent = Math.max(state.mines - state.flagsPlaced, 0);
+      boardTitleEl.textContent = state.rows + " x " + state.cols + " / " + state.mines + " 雷";
+    }
+
+    function buildBoard() {
+      boardEl.innerHTML = "";
+      boardEl.style.setProperty("--cols", state.cols);
+      state.board = [];
+      state.generated = false;
+      state.gameOver = false;
+      state.win = false;
+      state.revealedCount = 0;
+      state.flagsPlaced = 0;
+      resetTimer();
+      updateCounters();
+      setStatus("", "准备开始", "点任意格开始。手机上可切换为“点击插旗”模式。");
+
+      for (let row = 0; row < state.rows; row += 1) {
+        const line = [];
+        for (let col = 0; col < state.cols; col += 1) {
+          const cell = makeCell(row, col);
+          const button = document.createElement("button");
+          button.className = "cell";
+          button.type = "button";
+          button.dataset.row = row;
+          button.dataset.col = col;
+          button.setAttribute("aria-label", "row " + row + " col " + col);
+          button.addEventListener("click", () => handleCellClick(row, col));
+          button.addEventListener("contextmenu", (event) => {
+            event.preventDefault();
+            toggleFlag(row, col);
+          });
+          cell.el = button;
+          line.push(cell);
+          boardEl.appendChild(button);
+        }
+        state.board.push(line);
+      }
+    }
+
+    function inBounds(row, col) {
+      return row >= 0 && row < state.rows && col >= 0 && col < state.cols;
+    }
+
+    function neighbors(row, col) {
+      const found = [];
+      for (let dr = -1; dr <= 1; dr += 1) {
+        for (let dc = -1; dc <= 1; dc += 1) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = row + dr;
+          const nc = col + dc;
+          if (inBounds(nr, nc)) {
+            found.push(state.board[nr][nc]);
+          }
+        }
+      }
+      return found;
+    }
+
+    function placeMines(safeRow, safeCol) {
+      const forbidden = new Set();
+      forbidden.add(safeRow + ":" + safeCol);
+      neighbors(safeRow, safeCol).forEach((cell) => {
+        forbidden.add(cell.row + ":" + cell.col);
+      });
+
+      const available = [];
+      for (let row = 0; row < state.rows; row += 1) {
+        for (let col = 0; col < state.cols; col += 1) {
+          if (!forbidden.has(row + ":" + col)) {
+            available.push(state.board[row][col]);
+          }
+        }
+      }
+
+      for (let i = available.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [available[i], available[j]] = [available[j], available[i]];
+      }
+
+      available.slice(0, state.mines).forEach((cell) => {
+        cell.mine = true;
+      });
+
+      state.board.flat().forEach((cell) => {
+        if (cell.mine) return;
+        cell.count = neighbors(cell.row, cell.col).filter((neighbor) => neighbor.mine).length;
+      });
+
+      state.generated = true;
+    }
+
+    function renderCell(cell) {
+      const classNames = ["cell"];
+      let label = "";
+
+      if (cell.revealed) {
+        classNames.push("revealed");
+        if (cell.mine) {
+          classNames.push("mine");
+          label = "*";
+        } else if (cell.count > 0) {
+          classNames.push("n" + cell.count);
+          label = String(cell.count);
+        } else {
+          classNames.push("zero");
+        }
+      } else if (cell.flagged) {
+        classNames.push("flagged");
+        label = "!";
+      }
+
+      if (cell.wrong) {
+        classNames.push("wrong");
+      }
+
+      cell.el.className = classNames.join(" ");
+      cell.el.textContent = label;
+    }
+
+    function revealArea(startRow, startCol) {
+      const queue = [state.board[startRow][startCol]];
+
+      while (queue.length) {
+        const cell = queue.pop();
+
+        if (cell.revealed || cell.flagged) continue;
+        cell.revealed = true;
+        state.revealedCount += 1;
+        renderCell(cell);
+
+        if (cell.count === 0) {
+          neighbors(cell.row, cell.col).forEach((neighbor) => {
+            if (!neighbor.revealed && !neighbor.mine && !neighbor.flagged) {
+              queue.push(neighbor);
+            }
+          });
+        }
+      }
+    }
+
+    function revealAllMines() {
+      state.board.flat().forEach((cell) => {
+        if (cell.mine) {
+          cell.revealed = true;
+        }
+        if (cell.flagged && !cell.mine) {
+          cell.wrong = true;
+        }
+        renderCell(cell);
+      });
+    }
+
+    function checkWin() {
+      const totalSafe = state.rows * state.cols - state.mines;
+      if (state.revealedCount !== totalSafe) return;
+
+      state.win = true;
+      state.gameOver = true;
+      if (state.timerId) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+      }
+
+      state.board.flat().forEach((cell) => {
+        if (cell.mine && !cell.flagged) {
+          cell.flagged = true;
+          state.flagsPlaced += 1;
+          renderCell(cell);
+        }
+      });
+
+      updateCounters();
+      setStatus("win", "挑战成功", "所有安全格都已翻开，自动帮你插好了剩余旗子。");
+      hintTextEl.textContent = "想再来一局？点“重新开始”或者切换难度。";
+    }
+
+    function revealCell(row, col) {
+      const cell = state.board[row][col];
+      if (state.gameOver || cell.flagged || cell.revealed) return;
+
+      if (!state.generated) {
+        placeMines(row, col);
+        startTimer();
+        setStatus("", "正在排雷", "小心推进，数字表示周围八格中的地雷数量。");
+      }
+
+      if (cell.mine) {
+        cell.revealed = true;
+        renderCell(cell);
+        state.gameOver = true;
+        if (state.timerId) {
+          clearInterval(state.timerId);
+          state.timerId = null;
+        }
+        revealAllMines();
+        setStatus("lose", "踩雷了", "这局失败，重新开始再试一次。");
+        hintTextEl.textContent = "提示：先从边角或中部大片区域试探，看到数字后再插旗。";
+        return;
+      }
+
+      revealArea(row, col);
+      checkWin();
+    }
+
+    function toggleFlag(row, col) {
+      const cell = state.board[row][col];
+      if (state.gameOver || cell.revealed) return;
+
+      cell.flagged = !cell.flagged;
+      state.flagsPlaced += cell.flagged ? 1 : -1;
+      renderCell(cell);
+      updateCounters();
+    }
+
+    function handleCellClick(row, col) {
+      if (state.actionMode === "flag") {
+        toggleFlag(row, col);
+      } else {
+        revealCell(row, col);
+      }
+    }
+
+    function applyLevel(levelKey) {
+      const config = levels[levelKey];
+      state.level = levelKey;
+      state.rows = config.rows;
+      state.cols = config.cols;
+      state.mines = config.mines;
+      difficultyButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.level === levelKey);
+      });
+      hintTextEl.textContent = "提示：右键可以快速插旗；第一次翻开会自动避开首格与周围区域。";
+      buildBoard();
+    }
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      applyLevel(state.level);
+    });
+
+    revealModeBtn.addEventListener("click", () => {
+      state.actionMode = "reveal";
+      updateModeButtons();
+    });
+
+    flagModeBtn.addEventListener("click", () => {
+      state.actionMode = "flag";
+      updateModeButtons();
+    });
+
+    document.getElementById("tipBtn").addEventListener("click", () => {
+      setStatus("", "规则说明", "翻开所有非雷格子即可获胜；数字代表周围八格内的雷数；右键或插旗模式可标记可疑位置。");
+      hintTextEl.textContent = "如果已经进入对局，规则卡片不会影响当前棋盘。";
+    });
+
+    difficultyButtons.forEach((button) => {
+      button.addEventListener("click", () => applyLevel(button.dataset.level));
+    });
+
+    updateModeButtons();
+    applyLevel("easy");
+  </script>
+</body>
+</html>
