@@ -9,6 +9,15 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    if (url.hostname === "t.uu5c.top" && url.pathname === "/") {
+      if (env.ASSETS) {
+        const indexUrl = new URL("/index.html", request.url);
+        return env.ASSETS.fetch(new Request(indexUrl, request));
+      }
+
+      return notFound();
+    }
+
     if (url.pathname === "/api/test") {
       return json({ ok: true, msg: "backend is working" });
     }
