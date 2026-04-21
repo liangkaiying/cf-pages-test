@@ -8,5 +8,5 @@ binding = "ASSETS"
 
 [[d1_databases]]
 binding = "apitest_bind"
-database_name = "apitest_bind"
-database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+database_name = "apitest"
+database_id = "2dfcaa0c-1045-4b34-a6ea-a8da9fae6b58"
