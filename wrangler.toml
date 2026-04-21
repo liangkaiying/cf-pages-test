@@ -1,4 +1,5 @@
-name = "cf-pages-test"
+# wrangler.toml
+name = 'empty-boat-23ee'
 main = "src/worker.js"
 compatibility_date = "2026-04-21"
 
