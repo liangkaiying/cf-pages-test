@@ -44,11 +44,3 @@ npm run deploy
 ## 注意
 
 示例为了兼容你现有表结构，仍使用明文密码字段；生产环境请改为哈希存储。
-
-## Cloudflare 控制台填写建议
-
-根据你截图，D1 名称是 `apitest`，所以 `wrangler.toml` 已改为：
-- `binding = "apitest_bind"`（代码里用这个名字）
-- `database_name = "apitest"`
-
-> 注意：截图里的 UUID 被界面省略了中后段，`database_id` 仍需你在控制台复制“完整 UUID”后覆盖。
