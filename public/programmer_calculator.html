@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>程序员计算器</title>
+  <style>
+    :root {
+      --bg: #f6efe6;
+      --panel: rgba(255, 252, 247, 0.92);
+      --panel-strong: rgba(255, 255, 255, 0.98);
+      --line: rgba(63, 46, 32, 0.1);
+      --text: #21170f;
+      --muted: #716356;
+      --accent: #d56a2d;
+      --accent-deep: #a04618;
+      --accent-soft: rgba(213, 106, 45, 0.12);
+      --dark: #2d343d;
+      --dark-soft: #3e4650;
+      --shadow: 0 28px 80px rgba(54, 34, 20, 0.14);
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 16px;
+      font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(213, 106, 45, 0.16), transparent 24%),
+        radial-gradient(circle at 85% 18%, rgba(58, 127, 163, 0.12), transparent 20%),
+        linear-gradient(145deg, #f8f1e9 0%, var(--bg) 45%, #e9ddcf 100%);
+    }
+
+    .app {
+      width: min(100%, 430px);
+      margin: 0 auto;
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.58);
+      border-radius: 32px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero {
+      padding: 24px 20px 18px;
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.16), transparent 34%),
+        linear-gradient(160deg, rgba(28, 24, 20, 0.95), rgba(56, 42, 31, 0.92));
+      color: #f8f0e7;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(248, 240, 231, 0.8);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      margin: 16px 0 8px;
+      font-size: clamp(28px, 7vw, 40px);
+      line-height: 0.96;
+      letter-spacing: -0.05em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: rgba(248, 240, 231, 0.76);
+      line-height: 1.65;
+      font-size: 14px;
+    }
+
+    .display {
+      margin-top: 22px;
+      padding: 16px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .meta-row,
+    .toolbar,
+    .tab-row,
+    .width-row,
+    .action-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .meta-row {
+      justify-content: space-between;
+      margin-bottom: 12px;
+      color: rgba(248, 240, 231, 0.72);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .expression {
+      min-height: 18px;
+      color: rgba(248, 240, 231, 0.82);
+      font-size: 13px;
+      letter-spacing: 0.04em;
+    }
+
+    .value {
+      margin: 0;
+      font-size: clamp(24px, 6.8vw, 36px);
+      line-height: 1.1;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      word-break: break-all;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    .body {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel {
+      padding: 16px;
+      border-radius: var(--radius-lg);
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .tab-row,
+    .width-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .width-row {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .tab,
+    .width-btn,
+    .utility,
+    .op-btn,
+    .digit-btn {
+      appearance: none;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+
+    .tab,
+    .width-btn {
+      padding: 12px 10px;
+      border-radius: 14px;
+      background: rgba(45, 52, 61, 0.06);
+      color: #525e69;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .tab.active,
+    .width-btn.active {
+      background: var(--dark);
+      color: #f8fafc;
+      box-shadow: 0 14px 24px rgba(45, 52, 61, 0.2);
+    }
+
+    .conversion-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .conversion-item {
+      display: grid;
+      gap: 6px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #f7f4ef;
+      border: 1px solid rgba(63, 46, 32, 0.06);
+    }
+
+    .conversion-item strong {
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+    }
+
+    .conversion-item span {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      word-break: break-all;
+      line-height: 1.55;
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .utility {
+      padding: 12px 10px;
+      border-radius: 14px;
+      background: #f5ede4;
+      color: #5d5044;
+      font-weight: 900;
+      font-size: 14px;
+    }
+
+    .utility.primary {
+      background: var(--accent-soft);
+      color: var(--accent-deep);
+    }
+
+    .status {
+      margin-top: 10px;
+      min-height: 18px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .ops-grid,
+    .digits-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .ops-grid {
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    .op-btn {
+      padding: 12px 6px;
+      border-radius: 14px;
+      background: rgba(213, 106, 45, 0.08);
+      color: var(--accent-deep);
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .op-btn.active {
+      background: linear-gradient(135deg, var(--accent) 0%, #eb9656 100%);
+      color: #fff8f1;
+      box-shadow: 0 16px 26px rgba(213, 106, 45, 0.22);
+    }
+
+    .digits-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .digit-btn {
+      min-height: 58px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff 0%, #f2eee9 100%);
+      color: #1f252c;
+      font-size: 20px;
+      font-weight: 900;
+      box-shadow: inset 0 0 0 1px rgba(63, 46, 32, 0.08);
+    }
+
+    .digit-btn.subtle {
+      font-size: 15px;
+      color: var(--muted);
+      background: #f7f2ec;
+    }
+
+    .digit-btn.equal {
+      background: linear-gradient(135deg, #2f3742 0%, #414b57 100%);
+      color: #f8fafc;
+      box-shadow: 0 18px 28px rgba(45, 52, 61, 0.24);
+    }
+
+    .digit-btn:disabled {
+      opacity: 0.32;
+      cursor: not-allowed;
+      box-shadow: inset 0 0 0 1px rgba(63, 46, 32, 0.04);
+    }
+
+    .tab:hover,
+    .width-btn:hover,
+    .utility:hover,
+    .op-btn:hover,
+    .digit-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    @media (min-width: 720px) {
+      body {
+        padding: 24px;
+      }
+
+      .app {
+        width: min(100%, 900px);
+      }
+
+      .body {
+        grid-template-columns: 0.95fr 1.05fr;
+        align-items: start;
+      }
+
+      .left-column,
+      .right-column {
+        display: grid;
+        gap: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <div class="eyebrow">Dev Tool</div>
+      <h1>程序员计算器</h1>
+      <p>面向移动端的整数计算器，支持 BIN / OCT / DEC / HEX 切换、位宽控制、位运算与快速进制查看。</p>
+
+      <div class="display">
+        <div class="meta-row">
+          <span id="baseBadge">DEC</span>
+          <span id="widthBadge">32-bit</span>
+        </div>
+        <div class="expression" id="expressionLine">Ready</div>
+        <p class="value" id="valueLine">0</p>
+      </div>
+    </section>
+
+    <section class="body">
+      <div class="left-column">
+        <article class="panel">
+          <p class="section-title">Base</p>
+          <div class="tab-row" id="baseTabs">
+            <button class="tab active" data-base="10" type="button">DEC</button>
+            <button class="tab" data-base="16" type="button">HEX</button>
+            <button class="tab" data-base="2" type="button">BIN</button>
+            <button class="tab" data-base="8" type="button">OCT</button>
+          </div>
+        </article>
+
+        <article class="panel">
+          <p class="section-title">Word Size</p>
+          <div class="width-row" id="widthTabs">
+            <button class="width-btn" data-width="8" type="button">8-bit</button>
+            <button class="width-btn" data-width="16" type="button">16-bit</button>
+            <button class="width-btn active" data-width="32" type="button">32-bit</button>
+            <button class="width-btn" data-width="64" type="button">64-bit</button>
+          </div>
+        </article>
+
+        <article class="panel">
+          <p class="section-title">Conversions</p>
+          <div class="conversion-grid">
+            <div class="conversion-item">
+              <strong>Dec</strong>
+              <span id="decView">0</span>
+            </div>
+            <div class="conversion-item">
+              <strong>Hex</strong>
+              <span id="hexView">0</span>
+            </div>
+            <div class="conversion-item">
+              <strong>Bin</strong>
+              <span id="binView">0</span>
+            </div>
+            <div class="conversion-item">
+              <strong>Oct</strong>
+              <span id="octView">0</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="right-column">
+        <article class="panel">
+          <p class="section-title">Quick Actions</p>
+          <div class="action-row">
+            <button class="utility primary" data-action="all-clear" type="button">AC</button>
+            <button class="utility" data-action="clear-entry" type="button">CE</button>
+            <button class="utility" data-action="backspace" type="button">⌫</button>
+            <button class="utility" data-action="copy" type="button">Copy</button>
+          </div>
+          <div class="action-row" style="margin-top: 10px;">
+            <button class="utility" data-action="toggle-sign" type="button">±</button>
+            <button class="utility" data-action="not" type="button">NOT</button>
+            <button class="utility" data-action="equals" type="button">=</button>
+            <button class="utility" data-action="reset-op" type="button">Op</button>
+          </div>
+          <div class="status" id="statusLine">提示：可以直接用键盘输入，Enter 求值，Backspace 删除。</div>
+        </article>
+
+        <article class="panel">
+          <p class="section-title">Operations</p>
+          <div class="ops-grid" id="opsGrid">
+            <button class="op-btn" data-op="ADD" type="button">+</button>
+            <button class="op-btn" data-op="SUB" type="button">-</button>
+            <button class="op-btn" data-op="MUL" type="button">*</button>
+            <button class="op-btn" data-op="DIV" type="button">/</button>
+            <button class="op-btn" data-op="MOD" type="button">MOD</button>
+            <button class="op-btn" data-op="AND" type="button">AND</button>
+            <button class="op-btn" data-op="OR" type="button">OR</button>
+            <button class="op-btn" data-op="XOR" type="button">XOR</button>
+            <button class="op-btn" data-op="LSH" type="button">&lt;&lt;</button>
+            <button class="op-btn" data-op="RSH" type="button">&gt;&gt;</button>
+          </div>
+        </article>
+
+        <article class="panel">
+          <p class="section-title">Keypad</p>
+          <div class="digits-grid" id="digitGrid">
+            <button class="digit-btn" data-digit="A" type="button">A</button>
+            <button class="digit-btn" data-digit="B" type="button">B</button>
+            <button class="digit-btn" data-digit="C" type="button">C</button>
+            <button class="digit-btn" data-digit="D" type="button">D</button>
+            <button class="digit-btn" data-digit="E" type="button">E</button>
+            <button class="digit-btn" data-digit="F" type="button">F</button>
+            <button class="digit-btn" data-digit="8" type="button">8</button>
+            <button class="digit-btn" data-digit="9" type="button">9</button>
+            <button class="digit-btn" data-digit="4" type="button">4</button>
+            <button class="digit-btn" data-digit="5" type="button">5</button>
+            <button class="digit-btn" data-digit="6" type="button">6</button>
+            <button class="digit-btn" data-digit="7" type="button">7</button>
+            <button class="digit-btn" data-digit="1" type="button">1</button>
+            <button class="digit-btn" data-digit="2" type="button">2</button>
+            <button class="digit-btn" data-digit="3" type="button">3</button>
+            <button class="digit-btn equal" data-action="equals" type="button">=</button>
+            <button class="digit-btn subtle" data-action="toggle-sign" type="button">±</button>
+            <button class="digit-btn" data-digit="0" type="button">0</button>
+            <button class="digit-btn subtle" data-action="backspace" type="button">⌫</button>
+            <button class="digit-btn subtle" data-action="all-clear" type="button">AC</button>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      base: 10,
+      width: 32,
+      entry: "0",
+      storedValue: null,
+      pendingOp: null,
+      overwriteEntry: false,
+      status: "提示：可以直接用键盘输入，Enter 求值，Backspace 删除。"
+    };
+
+    const baseNames = { 2: "BIN", 8: "OCT", 10: "DEC", 16: "HEX" };
+    const opSymbols = {
+      ADD: "+",
+      SUB: "-",
+      MUL: "*",
+      DIV: "/",
+      MOD: "MOD",
+      AND: "AND",
+      OR: "OR",
+      XOR: "XOR",
+      LSH: "<<",
+      RSH: ">>"
+    };
+
+    const valueLine = document.getElementById("valueLine");
+    const expressionLine = document.getElementById("expressionLine");
+    const baseBadge = document.getElementById("baseBadge");
+    const widthBadge = document.getElementById("widthBadge");
+    const statusLine = document.getElementById("statusLine");
+    const decView = document.getElementById("decView");
+    const hexView = document.getElementById("hexView");
+    const binView = document.getElementById("binView");
+    const octView = document.getElementById("octView");
+
+    const baseButtons = [...document.querySelectorAll("[data-base]")];
+    const widthButtons = [...document.querySelectorAll("[data-width]")];
+    const opButtons = [...document.querySelectorAll("[data-op]")];
+    const digitButtons = [...document.querySelectorAll("[data-digit]")];
+    const actionButtons = [...document.querySelectorAll("[data-action]")];
+
+    function bitCountBigInt() {
+      return BigInt(state.width);
+    }
+
+    function fullMask() {
+      return (1n << bitCountBigInt()) - 1n;
+    }
+
+    function normalize(value) {
+      const width = bitCountBigInt();
+      const mask = (1n << width) - 1n;
+      const signBit = 1n << (width - 1n);
+      const wrapped = value & mask;
+      return wrapped >= signBit ? wrapped - (1n << width) : wrapped;
+    }
+
+    function toUnsigned(value) {
+      return value & fullMask();
+    }
+
+    function parseEntry() {
+      const text = state.entry || "0";
+      if (state.base === 10) {
+        try {
+          return normalize(BigInt(text));
+        } catch (error) {
+          return 0n;
+        }
+      }
+
+      let raw = text.toUpperCase();
+      if (!raw) return 0n;
+      if (raw.startsWith("-")) raw = raw.slice(1);
+      const digits = "0123456789ABCDEF";
+      let value = 0n;
+      for (const ch of raw) {
+        const digit = digits.indexOf(ch);
+        if (digit < 0 || digit >= state.base) continue;
+        value = value * BigInt(state.base) + BigInt(digit);
+      }
+      return normalize(value);
+    }
+
+    function formatValue(value, base) {
+      const normalized = normalize(value);
+      if (base === 10) {
+        return normalized.toString(10);
+      }
+      return toUnsigned(normalized).toString(base).toUpperCase();
+    }
+
+    function groupedBinary(value) {
+      const bits = state.width;
+      const raw = toUnsigned(value).toString(2).padStart(bits, "0");
+      return raw.replace(/(.{4})/g, "$1 ").trim();
+    }
+
+    function updateActiveStates() {
+      baseButtons.forEach((button) => {
+        button.classList.toggle("active", Number(button.dataset.base) === state.base);
+      });
+      widthButtons.forEach((button) => {
+        button.classList.toggle("active", Number(button.dataset.width) === state.width);
+      });
+      opButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.op === state.pendingOp);
+      });
+
+      digitButtons.forEach((button) => {
+        const digit = button.dataset.digit;
+        const numeric = parseInt(digit, 16);
+        button.disabled = Number.isNaN(numeric) ? true : numeric >= state.base;
+      });
+    }
+
+    function render() {
+      const current = parseEntry();
+      valueLine.textContent = state.entry;
+      baseBadge.textContent = baseNames[state.base];
+      widthBadge.textContent = state.width + "-bit";
+      expressionLine.textContent = state.pendingOp && state.storedValue !== null
+        ? formatValue(state.storedValue, state.base) + " " + opSymbols[state.pendingOp]
+        : "Ready";
+      statusLine.textContent = state.status;
+      decView.textContent = formatValue(current, 10);
+      hexView.textContent = formatValue(current, 16);
+      binView.textContent = groupedBinary(current);
+      octView.textContent = formatValue(current, 8);
+      updateActiveStates();
+    }
+
+    function setStatus(message) {
+      state.status = message;
+      render();
+    }
+
+    function replaceEntryFromValue(value) {
+      state.entry = formatValue(normalize(value), state.base);
+      state.overwriteEntry = false;
+    }
+
+    function appendDigit(digit) {
+      const upper = digit.toUpperCase();
+      const allowed = parseInt(upper, 16);
+      if (Number.isNaN(allowed) || allowed >= state.base) return;
+
+      if (state.overwriteEntry || state.entry === "0") {
+        state.entry = upper;
+      } else if (state.entry === "-0" && state.base === 10) {
+        state.entry = "-" + upper;
+      } else {
+        state.entry += upper;
+      }
+      state.overwriteEntry = false;
+      state.status = "输入中";
+      render();
+    }
+
+    function clearEntry() {
+      state.entry = "0";
+      state.overwriteEntry = false;
+      setStatus("已清空当前输入");
+    }
+
+    function allClear() {
+      state.entry = "0";
+      state.storedValue = null;
+      state.pendingOp = null;
+      state.overwriteEntry = false;
+      setStatus("状态已重置");
+    }
+
+    function backspace() {
+      if (state.overwriteEntry) {
+        state.entry = "0";
+        state.overwriteEntry = false;
+        render();
+        return;
+      }
+
+      if (state.entry.length <= 1 || state.entry === "-0") {
+        state.entry = "0";
+      } else {
+        state.entry = state.entry.slice(0, -1);
+        if (state.entry === "-" || state.entry === "") {
+          state.entry = "0";
+        }
+      }
+      state.status = "已删除一位";
+      render();
+    }
+
+    function toggleSign() {
+      const current = parseEntry();
+      replaceEntryFromValue(-current);
+      setStatus("已切换符号");
+    }
+
+    function applyNot() {
+      const current = parseEntry();
+      replaceEntryFromValue(~current);
+      setStatus("已执行按位取反");
+    }
+
+    function setBase(base) {
+      const current = parseEntry();
+      state.base = base;
+      state.entry = formatValue(current, base);
+      render();
+    }
+
+    function setWidth(width) {
+      const current = normalize(parseEntry());
+      state.width = width;
+      state.entry = formatValue(current, state.base);
+      if (state.storedValue !== null) {
+        state.storedValue = normalize(state.storedValue);
+      }
+      setStatus("位宽已切换到 " + width + "-bit");
+    }
+
+    function computeOperation(left, right, op) {
+      switch (op) {
+        case "ADD":
+          return normalize(left + right);
+        case "SUB":
+          return normalize(left - right);
+        case "MUL":
+          return normalize(left * right);
+        case "DIV":
+          if (right === 0n) throw new Error("除数不能为 0");
+          return normalize(left / right);
+        case "MOD":
+          if (right === 0n) throw new Error("模数不能为 0");
+          return normalize(left % right);
+        case "AND":
+          return normalize(left & right);
+        case "OR":
+          return normalize(left | right);
+        case "XOR":
+          return normalize(left ^ right);
+        case "LSH":
+          return normalize(left << (right < 0n ? 0n : right));
+        case "RSH":
+          return normalize(left >> (right < 0n ? 0n : right));
+        default:
+          return normalize(right);
+      }
+    }
+
+    function chooseOperator(op) {
+      const current = parseEntry();
+      try {
+        if (state.pendingOp && state.storedValue !== null && !state.overwriteEntry) {
+          state.storedValue = computeOperation(state.storedValue, current, state.pendingOp);
+          state.entry = formatValue(state.storedValue, state.base);
+        } else if (state.storedValue === null || !state.pendingOp) {
+          state.storedValue = current;
+        }
+
+        state.pendingOp = op;
+        state.overwriteEntry = true;
+        setStatus("已选择运算 " + opSymbols[op]);
+      } catch (error) {
+        setStatus(error.message);
+      }
+    }
+
+    function evaluate() {
+      if (!state.pendingOp || state.storedValue === null) {
+        setStatus("没有待计算的运算");
+        return;
+      }
+
+      try {
+        const result = computeOperation(state.storedValue, parseEntry(), state.pendingOp);
+        state.entry = formatValue(result, state.base);
+        state.storedValue = null;
+        state.pendingOp = null;
+        state.overwriteEntry = true;
+        setStatus("计算完成");
+      } catch (error) {
+        setStatus(error.message);
+      }
+    }
+
+    async function copyCurrent() {
+      try {
+        await navigator.clipboard.writeText(state.entry);
+        setStatus("当前结果已复制");
+      } catch (error) {
+        setStatus("复制失败，请手动长按选择");
+      }
+    }
+
+    function resetOperationOnly() {
+      state.pendingOp = null;
+      state.storedValue = null;
+      setStatus("已清除待执行运算");
+    }
+
+    function handleAction(action) {
+      switch (action) {
+        case "all-clear":
+          allClear();
+          break;
+        case "clear-entry":
+          clearEntry();
+          break;
+        case "backspace":
+          backspace();
+          break;
+        case "toggle-sign":
+          toggleSign();
+          break;
+        case "not":
+          applyNot();
+          break;
+        case "copy":
+          copyCurrent();
+          break;
+        case "equals":
+          evaluate();
+          break;
+        case "reset-op":
+          resetOperationOnly();
+          break;
+        default:
+          break;
+      }
+    }
+
+    baseButtons.forEach((button) => {
+      button.addEventListener("click", () => setBase(Number(button.dataset.base)));
+    });
+
+    widthButtons.forEach((button) => {
+      button.addEventListener("click", () => setWidth(Number(button.dataset.width)));
+    });
+
+    opButtons.forEach((button) => {
+      button.addEventListener("click", () => chooseOperator(button.dataset.op));
+    });
+
+    digitButtons.forEach((button) => {
+      button.addEventListener("click", () => appendDigit(button.dataset.digit));
+    });
+
+    actionButtons.forEach((button) => {
+      button.addEventListener("click", () => handleAction(button.dataset.action));
+    });
+
+    document.addEventListener("keydown", (event) => {
+      const key = event.key.toUpperCase();
+      if (/^[0-9A-F]$/.test(key)) {
+        appendDigit(key);
+        return;
+      }
+      if (event.key === "Enter") {
+        evaluate();
+        return;
+      }
+      if (event.key === "Backspace") {
+        event.preventDefault();
+        backspace();
+        return;
+      }
+      if (event.key === "Delete") {
+        clearEntry();
+        return;
+      }
+      if (event.key === "+") chooseOperator("ADD");
+      if (event.key === "-") chooseOperator("SUB");
+      if (event.key === "*") chooseOperator("MUL");
+      if (event.key === "/") chooseOperator("DIV");
+      if (event.key === "%") chooseOperator("MOD");
+    });
+
+    render();
+  </script>
+</body>
+</html>
