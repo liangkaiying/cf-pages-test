@@ -1,5 +1,5 @@
 # wrangler.toml
-name = 'empty-boat-23ee'
+name = 'cf-pages-test'
 main = "src/worker.js"
 compatibility_date = "2026-04-21"
 
@@ -9,5 +9,5 @@ binding = "ASSETS"
 
 [[d1_databases]]
 binding = "apitest_bind"
-database_name = "apitest"
-database_id = "2dfcaa0c-1045-4b34-a6ea-a8da9fae6b58"
+database_name = "test"
+database_id = "3c6c874e-0e2b-4532-add2-15bd521af2c7"
